@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MiniChat-Germini</title>
+    <style>
+        .wrapper {
+            width: 500px;
+            margin: auto;
+            border: 1px solid grey;
+            border-radius: 10px;
+            padding: 10px;
+        }
+
+        textarea,
+        button {
+            font-size: 15px;
+            width: 100%;
+            padding: 5px;
+            box-sizing: border-box;
+            border-radius: 5px
+        }
+
+        button {
+            background-color: darkolivegreen;
+            color: white;
+        }
+
+        h1 {
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrapper">
+        <h1>Chat-Germini</h1>
+        <textarea name="question" id="question"></textarea>
+        <button onclick="send()">Ask</button>
+        <div id="answer"></div>
+    </div>
+    <script>
+        function send() {
+            const question = document.querySelector("#question").value;
+
+            fetch("http://127.0.0.1:5000/chat", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ "question": question })
+            })
+                .then(rs => rs.json())
+                .then(data => {
+                    const answerDiv = document.querySelector("#answer");
+                    if (data.response) {
+                        // Xử lý nội dung: bỏ dấu * và thêm <br> khi gặp xuống dòng
+                        let formattedResponse = data.response
+                            .replace(/\*\*/g, '') // Xóa tất cả dấu **
+                            .replace(/\*/g, '')   // Xóa tất cả dấu *
+                            .replace(/\n/g, '<br>'); // Đổi \n thành <br> để trình duyệt hiểu xuống dòng
+                        answerDiv.innerHTML += `<div style="margin-top:10px; padding:5px; border-top:1px solid #ccc;">
+                                <strong>Bạn:</strong> ${question}<br>
+                                <strong>Bot:</strong> ${formattedResponse}
+                            </div>`;
+                    } else {
+                        answerDiv.innerHTML += `
+                        <div style="margin-top:10px; padding:5px; border-top:1px solid #ccc;">
+                            <strong>Error:</strong> ${data.error}
+                        </div>`;
+                    }
+                    document.querySelector("#question").value = "";
+                })
+
+        }
+    </script>
+</body>
+
+</html>
