@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MiniChat-Germini</title>
+    <title>MiniChat-Gemini</title>
     <style>
         .wrapper {
             width: 500px;
@@ -12,6 +12,8 @@
             border: 1px solid grey;
             border-radius: 10px;
             padding: 10px;
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
         textarea,
@@ -20,32 +22,76 @@
             width: 100%;
             padding: 5px;
             box-sizing: border-box;
-            border-radius: 5px
+            border-radius: 5px;
+            margin-top: 5px;
         }
 
         button {
             background-color: darkolivegreen;
             color: white;
+            cursor: pointer;
         }
 
         h1 {
             text-align: center;
+        }
+
+        #answer {
+            margin-top: 10px;
         }
     </style>
 </head>
 
 <body>
     <div class="wrapper">
-        <h1>Chat-Germini</h1>
-        <textarea name="question" id="question"></textarea>
-        <button onclick="send()">Ask</button>
+        <h1>Chat-Gemini</h1>
+        <textarea name="question" id="question" placeholder="Nhập câu hỏi của bạn..."></textarea>
+        <button onclick="send()">Gửi</button>
+        <button onclick="clearHistory()" style="background-color: crimson;">Xóa Lịch Sử</button>
         <div id="answer"></div>
     </div>
-    <script>
-        function send() {
-            const question = document.querySelector("#question").value;
 
-            fetch("http://127.0.0.1:5000/chat", {
+    <script>
+        const apiBase = "https://chat-germini-2.onrender.com";
+
+        window.onload = function () {
+            // Load chat history khi mở lại
+            fetch(`${apiBase}/history`)
+                .then(rs => rs.json())
+                .then(data => {
+                    const answerDiv = document.querySelector("#answer");
+                    data.forEach(item => {
+                        let formattedResponse = item.bot
+                            .replace(/\*\*/g, '')
+                            .replace(/\*/g, '')
+                            .replace(/\n/g, '<br>');
+                        answerDiv.innerHTML += `<div style="margin-top:10px; padding:5px; border-top:1px solid #ccc;">
+                                <strong>Bạn:</strong> ${item.user}<br>
+                                <strong>Bot:</strong> ${formattedResponse}
+                            </div>`;
+                    });
+                    answerDiv.scrollTop = answerDiv.scrollHeight;
+                });
+        };
+
+        function send() {
+            const questionInput = document.querySelector("#question");
+            const question = questionInput.value.trim();
+            const answerDiv = document.querySelector("#answer");
+
+            if (question === "") {
+                alert("Vui lòng nhập câu hỏi!");
+                return;
+            }
+
+            const loadingId = 'loading-' + Date.now();
+            answerDiv.innerHTML += `<div style="margin-top:10px; padding:5px; border-top:1px solid #ccc;" id="${loadingId}">
+                <strong>Bạn:</strong> ${question}<br>
+                <em>Bot đang trả lời...</em>
+            </div>`;
+            answerDiv.scrollTop = answerDiv.scrollHeight;
+
+            fetch(`${apiBase}/chat`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
@@ -54,26 +100,34 @@
             })
                 .then(rs => rs.json())
                 .then(data => {
-                    const answerDiv = document.querySelector("#answer");
+                    const loadingDiv = document.getElementById(loadingId);
                     if (data.response) {
-                        // Xử lý nội dung: bỏ dấu * và thêm <br> khi gặp xuống dòng
+
                         let formattedResponse = data.response
                             .replace(/\*\*/g, '') // Xóa tất cả dấu **
                             .replace(/\*/g, '')   // Xóa tất cả dấu *
                             .replace(/\n/g, '<br>'); // Đổi \n thành <br> để trình duyệt hiểu xuống dòng
-                        answerDiv.innerHTML += `<div style="margin-top:10px; padding:5px; border-top:1px solid #ccc;">
-                                <strong>Bạn:</strong> ${question}<br>
-                                <strong>Bot:</strong> ${formattedResponse}
-                            </div>`;
+                        loadingDiv.innerHTML = `<strong>Bạn:</strong> ${question}<br>
+                                                <strong>Bot:</strong> ${formattedResponse}`;
                     } else {
-                        answerDiv.innerHTML += `
-                        <div style="margin-top:10px; padding:5px; border-top:1px solid #ccc;">
-                            <strong>Error:</strong> ${data.error}
-                        </div>`;
+                        loadingDiv.innerHTML = `<strong>Error:</strong> ${data.error}`;
                     }
-                    document.querySelector("#question").value = "";
-                })
+                    answerDiv.scrollTop = answerDiv.scrollHeight;
+                    questionInput.value = "";
+                });
+        }
 
+        function clearHistory() {
+            if (confirm("Bạn chắc chắn muốn xóa toàn bộ lịch sử?")) {
+                fetch(`${apiBase}/clear`, {
+                    method: "POST"
+                })
+                    .then(rs => rs.json())
+                    .then(data => {
+                        document.querySelector("#answer").innerHTML = "";
+                        alert(data.message);
+                    });
+            }
         }
     </script>
 </body>
