@@ -5,20 +5,15 @@ import json
 import os
 import psycopg2
 
-# Cấu hình Gemini API
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
-# Kết nối Database (Railway)
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
-# Khởi tạo Flask app
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-# Chọn model Gemini
 model = genai.GenerativeModel('gemini-2.0-flash')
 
-# Lưu lịch sử chat vào file
 HISTORY_FILE = 'chat_history.json'
 
 def load_history():
@@ -33,7 +28,6 @@ def save_history():
 
 chat_history = load_history()
 
-# Hàm lấy tất cả dữ liệu từ các bảng
 def get_all_data():
     try:
         conn = psycopg2.connect(DATABASE_URL)
@@ -49,7 +43,7 @@ def get_all_data():
 
         for table in tables:
             table_name = table[0]
-            cursor.execute(f"SELECT * FROM {table_name} LIMIT 10;")  # Lấy 10 dòng mẫu
+            cursor.execute(f'SELECT * FROM "{table_name}" LIMIT 10;')  # ← sửa ở đây
             rows = cursor.fetchall()
             colnames = [desc[0] for desc in cursor.description]
 
@@ -64,7 +58,6 @@ def get_all_data():
     except Exception as e:
         return f"Lỗi lấy dữ liệu: {e}"
 
-# Sinh câu trả lời từ Gemini + dữ liệu DB
 def generate_response(user_input):
     if not user_input:
         return {'error': 'Chưa có đầu vào'}
